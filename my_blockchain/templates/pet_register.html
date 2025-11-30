@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<!-- ====================== NEW FILE: PET REGISTRATION PAGE - START ====================== -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Your Pet - Blockchain Pet Registry</title>
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/vendor/font-awesome/font-awesome.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding-top: 80px;
+            padding-bottom: 50px;
+        }
+        .register-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .photo-preview {
+            width: 150px;
+            height: 150px;
+            border: 3px dashed #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px auto;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .photo-preview:hover {
+            border-color: #764ba2;
+            transform: scale(1.05);
+        }
+        .photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .success-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .success-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .qr-code {
+            margin: 20px 0;
+        }
+        .section-title {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.9) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a href="/pets" class="navbar-brand">🐾 Pet Blockchain Registry</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a href="/pets" class="nav-link">Home</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a href="/pet/register" class="nav-link">Register Pet</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/pet/search" class="nav-link">Search Pets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/" class="nav-link">Blockchain Explorer</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="register-card">
+            <h2 class="text-center mb-2">🐕 Register Your Pet on Blockchain</h2>
+            <p class="text-center text-muted mb-4">Create a permanent, tamper-proof identity</p>
+
+            <form id="petRegisterForm">
+                
+                <!-- Pet Photo -->
+                <div class="form-group text-center">
+                    <label><strong>Pet Photo</strong></label>
+                    <div class="photo-preview" id="photoPreview" onclick="document.getElementById('photoInput').click()">
+                        <i class="fa fa-camera fa-3x text-muted"></i>
+                    </div>
+                    <input type="file" id="photoInput" accept="image/*" style="display: none;">
+                    <small class="text-muted">Click to upload a photo (max 2MB)</small>
+                </div>
+
+                <!-- PET INFORMATION -->
+                <h5 class="section-title">🐾 Pet Information</h5>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Pet Name *</label>
+                            <input type="text" id="petName" class="form-control" placeholder="e.g., Max" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Species *</label>
+                            <select id="species" class="form-control" required>
+                                <option value="dog">Dog</option>
+                                <option value="cat">Cat</option>
+                                <option value="bird">Bird</option>
+                                <option value="rabbit">Rabbit</option>
+                                <option value="hamster">Hamster</option>
+                                <option value="guinea pig">Guinea Pig</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Breed</label>
+                            <input type="text" id="breed" class="form-control" placeholder="e.g., Golden Retriever">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Color/Markings</label>
+                            <input type="text" id="color" class="form-control" placeholder="e.g., Golden with white chest">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Birth Date</label>
+                            <input type="date" id="birthDate" class="form-control">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Weight</label>
+                            <input type="text" id="weight" class="form-control" placeholder="e.g., 25 kg or 55 lbs">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Microchip ID</label>
+                    <input type="text" id="microchipId" class="form-control" placeholder="e.g., 123456789012345">
+                    <small class="form-text text-muted">Leave blank if not microchipped</small>
+                </div>
+
+                <!-- OWNER INFORMATION -->
+                <h5 class="section-title">👤 Owner Information</h5>
+
+                <div class="alert alert-info">
+                    <i class="fa fa-info-circle"></i> <strong>Privacy Note:</strong> This information will be visible to anyone who finds your lost pet, helping them contact you quickly.
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Your Full Name *</label>
+                            <input type="text" id="ownerName" class="form-control" placeholder="e.g., John Smith" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Phone Number *</label>
+                            <input type="tel" id="ownerPhone" class="form-control" placeholder="e.g., +1234567890" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Email Address (optional)</label>
+                    <input type="email" id="ownerEmail" class="form-control" placeholder="e.g., john@example.com">
+                </div>
+
+                <!-- BLOCKCHAIN KEY -->
+                <h5 class="section-title">🔑 Blockchain Identity</h5>
+                
+                <div class="form-group">
+                    <label>Your Owner Key (Blockchain ID)</label>
+                    <div class="input-group">
+                        <input type="text" id="ownerKey" class="form-control" readonly>
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-secondary" onclick="generateOwnerKey()">
+                                <i class="fa fa-key"></i> Generate
+                            </button>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted">This is your unique blockchain identifier. <strong>Save it!</strong> You'll need it to manage your pet.</small>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>⚠️ Important:</strong> Save your Owner Key in a safe place! You'll need it to:
+                    <ul class="mb-0">
+                        <li>Add veterinary records</li>
+                        <li>Report your pet as lost</li>
+                        <li>Update pet information</li>
+                    </ul>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg btn-block mt-4">
+                    <i class="fa fa-check-circle"></i> Register on Blockchain
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="success-modal" id="successModal">
+        <div class="success-content">
+            <div style="font-size: 5rem;">✅</div>
+            <h2>Registration Successful!</h2>
+            <p>Your pet has been registered on the blockchain.</p>
+            
+            <div class="qr-code">
+                <p><strong>Pet ID:</strong></p>
+                <p><code id="petIdDisplay" style="font-size: 0.9rem;"></code></p>
+                <img id="qrCodeImage" src="" alt="QR Code" style="max-width: 200px; border-radius: 10px; margin: 15px 0;">
+                <p class="text-muted"><small>Scan this QR code to view pet profile</small></p>
+            </div>
+
+            <div class="alert alert-success">
+                <strong>🔑 Your Owner Key:</strong><br>
+                <code id="ownerKeyDisplay" style="word-break: break-all; font-size: 0.85rem;"></code><br>
+                <button class="btn btn-sm btn-outline-success mt-2" onclick="copyToClipboard()">
+                    <i class="fa fa-copy"></i> Copy to Clipboard
+                </button>
+                <p class="mb-0 mt-2"><small><strong>Save this key!</strong> You'll need it to manage your pet.</small></p>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>📊 Transaction Status:</strong><br>
+                <small>⏳ Pending (will be mined in the next block)</small>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button class="btn btn-success btn-lg" onclick="viewPetProfile()">
+                    <i class="fa fa-eye"></i> View Pet Profile
+                </button>
+                <br><br>
+                <button class="btn btn-secondary" onclick="closeSuccessModal()">
+                    <i class="fa fa-plus"></i> Register Another Pet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/vendor/jquery/jquery.min.js"></script>
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentPetId = null;
+        let currentOwnerKey = null;
+        let photoBase64 = null;
+
+        // Generate unique owner key
+        function generateOwnerKey() {
+            const timestamp = Date.now().toString(36);
+            const random = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const key = 'OWNER_' + (timestamp + random).toUpperCase();
+            document.getElementById('ownerKey').value = key;
+            return key;
+        }
+
+        // Auto-generate on page load
+        window.onload = function() {
+            generateOwnerKey();
+        };
+
+        // Photo upload handler
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check file size (max 2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('⚠️ Image too large! Please choose a smaller image (max 2MB)');
+                    this.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    photoBase64 = event.target.result;
+                    document.getElementById('photoPreview').innerHTML = 
+                        `<img src="${photoBase64}" alt="Pet Photo">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form submission
+        document.getElementById('petRegisterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const ownerKey = document.getElementById('ownerKey').value;
+            if (!ownerKey || ownerKey.length < 10) {
+                alert('⚠️ Please generate your owner key first!');
+                return;
+            }
+
+            const ownerName = document.getElementById('ownerName').value.trim();
+            const ownerPhone = document.getElementById('ownerPhone').value.trim();
+
+            if (!ownerName || !ownerPhone) {
+                alert('⚠️ Please fill in your name and phone number!');
+                return;
+            }
+
+            const petData = {
+                name: document.getElementById('petName').value.trim(),
+                species: document.getElementById('species').value,
+                breed: document.getElementById('breed').value.trim() || 'Mixed Breed',
+                color: document.getElementById('color').value.trim() || 'Not specified',
+                birth_date: document.getElementById('birthDate').value || 'Unknown',
+                weight: document.getElementById('weight').value.trim() || 'Unknown',
+                microchip_id: document.getElementById('microchipId').value.trim() || 'NOT_CHIPPED',
+                photo: photoBase64 || '',
+                owner_public_key: ownerKey,
+                owner_name: ownerName,
+                owner_phone: ownerPhone,
+                owner_email: document.getElementById('ownerEmail').value.trim() || ''
+            };
+
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Registering on Blockchain...';
+            submitBtn.disabled = true;
+
+            // Send to API
+            fetch('/api/pet/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(petData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentPetId = data.pet_id;
+                    currentOwnerKey = ownerKey;
+                    document.getElementById('petIdDisplay').textContent = data.pet_id;
+                    document.getElementById('ownerKeyDisplay').textContent = ownerKey;
+                    document.getElementById('qrCodeImage').src = data.qr_code;
+                    
+                    // Show success modal
+                    document.getElementById('successModal').style.display = 'flex';
+                } else {
+                    alert('❌ Registration failed: ' + data.error);
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                alert('❌ Error: ' + error);
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        function viewPetProfile() {
+            window.location.href = '/pet/' + currentPetId;
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').style.display = 'none';
+            document.getElementById('petRegisterForm').reset();
+            generateOwnerKey();
+            document.getElementById('photoPreview').innerHTML = '<i class="fa fa-camera fa-3x text-muted"></i>';
+            photoBase64 = null;
+        }
+
+        function copyToClipboard() {
+            const key = document.getElementById('ownerKeyDisplay').textContent;
+            navigator.clipboard.writeText(key).then(() => {
+                alert('✅ Owner key copied to clipboard!');
+            }).catch(err => {
+                alert('⚠️ Failed to copy. Please copy manually.');
+            });
+        }
+    </script>
+
+</body>
+</html>
+<!-- ====================== NEW FILE: PET REGISTRATION PAGE - END ====================== -->

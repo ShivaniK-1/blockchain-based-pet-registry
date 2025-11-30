@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<!-- ====================== NEW FILE: PET PROFILE PAGE - START ====================== -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Profile - Blockchain Pet Registry</title>
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/vendor/font-awesome/font-awesome.min.css">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            min-height: 100vh;
+            padding-top: 80px;
+            padding-bottom: 50px;
+        }
+        .profile-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+        }
+        .pet-photo {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 4px solid #84fab0;
+            object-fit: cover;
+            margin-bottom: 20px;
+        }
+        .qr-box {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin: 20px auto;
+        }
+        .section-title {
+            background: #84fab0;
+            padding: 10px 20px;
+            border-radius: 12px;
+            margin-top: 25px;
+            color: #004d40;
+        }
+        .status-badge {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: white;
+            font-size: 14px;
+        }
+        .status-active { background: #4caf50; }
+        .status-lost { background: #f44336; animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%,100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .history-card {
+            background: #ffffff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border-left: 5px solid #84fab0;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.8) !important;
+        }
+    </style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+        <a href="/pets" class="navbar-brand">🐾 Pet Blockchain Registry</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item"><a href="/pets" class="nav-link">Home</a></li>
+                <li class="nav-item"><a href="/pet/search" class="nav-link">Search Pets</a></li>
+                <li class="nav-item">
+                    <a href="/" class="nav-link">Blockchain Explorer</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div id="profileContainer" class="profile-card">
+        <div class="text-center">
+            <img id="petPhoto" class="pet-photo" src="" alt="Pet Photo">
+            <h2 id="petName">Loading...</h2>
+            <span id="statusBadge" class="status-badge">Loading...</span>
+
+            <p class="text-muted mt-2" id="microchipInfo"></p>
+        </div>
+
+        <!-- QR CODE -->
+        <div class="qr-box">
+            <h5>📱 Scan to View This Pet</h5>
+            <img id="qrCodeImg" src="" alt="QR Code" style="max-width:200px;">
+            <p class="mt-2 text-muted"><small>This QR code links directly to this profile. Great for pet collars.</small></p>
+        </div>
+
+        <!-- PET DETAILS -->
+        <h4 class="section-title">🐶 Pet Details</h4>
+        <div id="petDetails"></div>
+
+        <!-- OWNER DETAILS -->
+        <h4 class="section-title">👤 Owner Information</h4>
+        <div id="ownerDetails"></div>
+
+        <!-- LOST PET ACTIONS -->
+        <h4 class="section-title">🚨 Lost & Found</h4>
+        <div id="lostActions"></div>
+
+        <!-- ADD VET RECORD -->
+        <h4 class="section-title">🏥 Add Veterinary Record</h4>
+
+        <form id="vetForm">
+            <div class="form-group">
+                <label>Owner Key (Required to Add Records)</label>
+                <input type="text" id="vetOwnerKey" class="form-control" placeholder="Enter your owner key">
+            </div>
+
+            <div class="form-group">
+                <label>Record Type *</label>
+                <input type="text" id="vetType" class="form-control" placeholder="Vaccination, Checkup, Surgery" required>
+            </div>
+
+            <div class="form-group">
+                <label>Vet Name *</label>
+                <input type="text" id="vetName" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>Procedure *</label>
+                <input type="text" id="vetProcedure" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="vetNotes" class="form-control" placeholder="Optional notes"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-block mb-3">
+                <i class="fa fa-plus"></i> Add Veterinary Record  
+                <small>(fee: 0.001 tokens)</small>
+            </button>
+        </form>
+
+        <!-- BLOCKCHAIN HISTORY -->
+        <h4 class="section-title">⛓️ Blockchain History</h4>
+        <div id="historyContainer"></div>
+
+    </div>
+</div>
+
+<script src="/static/vendor/jquery/jquery.min.js"></script>
+<script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const petId = "{{ pet_id }}";
+
+    window.onload = function() {
+        loadPetProfile();
+    };
+
+    function loadPetProfile() {
+        fetch(`/api/pet/${petId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert("Error loading pet profile.");
+                    return;
+                }
+
+                const pet = data.pet;
+
+                document.getElementById('petPhoto').src = pet.photo || "https://via.placeholder.com/180?text=No+Photo";
+                document.getElementById('petName').textContent = pet.name;
+                document.getElementById('statusBadge').textContent = pet.status === "lost" ? "🚨 LOST" : "✓ ACTIVE";
+                document.getElementById('statusBadge').className =
+                    pet.status === "lost" ? "status-badge status-lost" : "status-badge status-active";
+
+                document.getElementById('microchipInfo').innerHTML =
+                    `<i class="fa fa-microchip"></i> Microchip ID: ${pet.microchip_id}`;
+
+                document.getElementById('qrCodeImg').src = data.qr_code;
+
+                // Pet details
+                document.getElementById('petDetails').innerHTML = `
+                    <p><strong>Species:</strong> ${pet.species}</p>
+                    <p><strong>Breed:</strong> ${pet.breed}</p>
+                    <p><strong>Color:</strong> ${pet.color}</p>
+                    <p><strong>Birth Date:</strong> ${pet.birth_date}</p>
+                    <p><strong>Weight:</strong> ${pet.weight}</p>
+                    <p><strong>Views:</strong> ${pet.view_count}</p>
+                `;
+
+                // Owner info
+                document.getElementById('ownerDetails').innerHTML = `
+                    <p><strong>Name:</strong> ${pet.owner_name}</p>
+                    <p><strong>Phone:</strong> ${pet.owner_phone}</p>
+                    <p><strong>Email:</strong> ${pet.owner_email}</p>
+                `;
+
+                renderLostActions(pet);
+                renderHistory(data.blockchain_history);
+            });
+    }
+
+    // -----------------------
+    // LOST PET ACTIONS
+    // -----------------------
+    function renderLostActions(pet) {
+        let html = "";
+
+        if (pet.status === "active") {
+            html = `
+                <button class="btn btn-danger btn-block" onclick="markLost()">
+                    <i class="fa fa-exclamation-triangle"></i> Mark as LOST  
+                    <small>(fee: 0.001 tokens)</small>
+                </button>
+            `;
+        } else {
+            html = `
+                <div class="alert alert-danger">
+                    <strong>⚠️ This pet is reported LOST.</strong><br>
+                    Location: ${pet.lost_location || "Unknown"}<br>
+                    Description: ${pet.lost_description || "No description"}
+                </div>
+
+                <button class="btn btn-success btn-block" onclick="markFound()">
+                    <i class="fa fa-check-circle"></i> Mark as FOUND
+                </button>
+            `;
+        }
+
+        document.getElementById('lostActions').innerHTML = html;
+    }
+
+    function markLost() {
+        const ownerKey = prompt("Enter your owner key to confirm:");
+
+        if (!ownerKey) return;
+
+        fetch(`/api/pet/${petId}/lost`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ owner_public_key: ownerKey })
+        }).then(res => res.json())
+          .then(data => {
+              if (!data.success) { alert(data.error); return; }
+              alert("Pet marked as LOST on blockchain.");
+              loadPetProfile();
+          });
+    }
+
+    function markFound() {
+        const finderKey = prompt("Enter your finder public key:");
+        const finderContact = prompt("Enter your contact info:");
+
+        fetch(`/api/pet/${petId}/found`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                finder_public_key: finderKey,
+                finder_contact: finderContact
+            })
+        }).then(res => res.json())
+          .then(data => {
+              if (!data.success) { alert(data.error); return; }
+              alert("Owner has been notified!");
+              loadPetProfile();
+          });
+    }
+
+    // -----------------------
+    // ADD VET RECORD
+    // -----------------------
+    document.getElementById('vetForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const payload = {
+            owner_public_key: document.getElementById('vetOwnerKey').value,
+            record_type: document.getElementById('vetType').value,
+            vet_name: document.getElementById('vetName').value,
+            procedure: document.getElementById('vetProcedure').value,
+            notes: document.getElementById('vetNotes').value
+        };
+
+        fetch(`/api/pet/${petId}/vet-record`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        }).then(res => res.json())
+          .then(data => {
+              if (!data.success) { alert(data.error); return; }
+              alert("Vet record added to blockchain!");
+              loadPetProfile();
+          });
+    });
+
+    // -----------------------
+    // BLOCKCHAIN HISTORY
+    // -----------------------
+    function renderHistory(history) {
+        const box = document.getElementById('historyContainer');
+        box.innerHTML = "";
+
+        if (history.length === 0) {
+            box.innerHTML = `<p class="text-muted">No blockchain entries yet.</p>`;
+            return;
+        }
+
+        history.forEach(tx => {
+            box.innerHTML += `
+                <div class="history-card">
+                    <strong>${tx.type}</strong>  
+                    <br><small>Block:</small> ${tx.block_number || "Pending"}  
+                    <br><small>Timestamp:</small> ${new Date(tx.timestamp * 1000).toLocaleString()}
+                </div>
+            `;
+        });
+    }
+
+</script>
+
+</body>
+</html>
+<!-- ====================== NEW FILE: PET PROFILE PAGE - END ====================== -->

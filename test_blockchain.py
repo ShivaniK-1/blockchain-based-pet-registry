@@ -1,491 +1,511 @@
 """
-Comprehensive Test Suite for Blockchain Implementation
-Tests all blockchain functionality including new features
-
-Run with: python -m pytest test_blockchain.py -v
-or: python test_blockchain.py
+Updated Test for pet_blockchain.py features
+Compatible with the FINAL patched Blockchain & PetRegistry implementation.
 """
 
 import unittest
-import sys
-import os
-import json
+from pet_blockchain import Blockchain, MINING_SENDER, PetRegistry
 import hashlib
-from collections import OrderedDict
-
-# Add parent directory to path to import blockchain module
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# Import the blockchain module (adjust import based on your file structure)
-try:
-    from blockchain import Blockchain, MINING_SENDER, MINING_REWARD, MINING_DIFFICULTY
-except ImportError:
-    print("Error: Could not import blockchain module. Make sure blockchain.py is in the correct location.")
-    sys.exit(1)
 
 
-class TestBlockchainBasics(unittest.TestCase):
-    """Test basic blockchain functionality"""
-    
-    def setUp(self):
-        """Set up test blockchain before each test"""
-        self.blockchain = Blockchain()
-    
-    def test_genesis_block_creation(self):
-        """Test if genesis block is created correctly"""
-        self.assertEqual(len(self.blockchain.chain), 1, "Chain should have genesis block")
-        self.assertEqual(self.blockchain.chain[0]['block_number'], 1, "Genesis block number should be 1")
-        self.assertEqual(self.blockchain.chain[0]['previous_hash'], '00', "Genesis block previous hash should be '00'")
-        self.assertEqual(len(self.blockchain.chain[0]['transactions']), 0, "Genesis block should have no transactions")
-        print("✓ Genesis block creation test passed")
-    
-    def test_create_block(self):
-        """Test block creation"""
-        initial_length = len(self.blockchain.chain)
-        self.blockchain.create_block(12345, 'previous_hash_test')
-        
-        self.assertEqual(len(self.blockchain.chain), initial_length + 1, "Chain length should increase by 1")
-        new_block = self.blockchain.chain[-1]
-        self.assertEqual(new_block['nonce'], 12345, "Block should have correct nonce")
-        self.assertEqual(new_block['previous_hash'], 'previous_hash_test', "Block should have correct previous hash")
-        print("✓ Block creation test passed")
-    
-    def test_hash_consistency(self):
-        """Test if hashing is consistent"""
-        block = self.blockchain.chain[0]
-        hash1 = self.blockchain.hash(block)
-        hash2 = self.blockchain.hash(block)
-        
-        self.assertEqual(hash1, hash2, "Hash should be consistent for same input")
-        self.assertIsInstance(hash1, str, "Hash should be a string")
-        self.assertEqual(len(hash1), 64, "SHA-256 hash should be 64 characters")
-        print("✓ Hash consistency test passed")
+# -----------------------------------------------------------
+# Node Tests
+# -----------------------------------------------------------
+class TestNodeEdgeCases(unittest.TestCase):
 
-
-# ==================== NEW FEATURE START: Merkle Tree Tests ====================
-class TestMerkleTree(unittest.TestCase):
-    """Test Merkle tree implementation"""
-    
     def setUp(self):
         self.blockchain = Blockchain()
-    
-    def test_empty_merkle_root(self):
-        """Test Merkle root calculation with no transactions"""
-        merkle_root = self.blockchain.calculate_merkle_root([])
-        self.assertIsInstance(merkle_root, str, "Merkle root should be a string")
-        self.assertEqual(len(merkle_root), 64, "Merkle root should be 64 characters (SHA-256)")
-        print("✓ Empty Merkle root test passed")
-    
-    def test_single_transaction_merkle_root(self):
-        """Test Merkle root with single transaction"""
-        transaction = {'sender': 'A', 'recipient': 'B', 'amount': 10}
-        merkle_root = self.blockchain.calculate_merkle_root([transaction])
-        self.assertIsInstance(merkle_root, str)
-        print("✓ Single transaction Merkle root test passed")
-    
-    def test_multiple_transactions_merkle_root(self):
-        """Test Merkle root with multiple transactions"""
-        transactions = [
-            {'sender': 'A', 'recipient': 'B', 'amount': 10},
-            {'sender': 'B', 'recipient': 'C', 'amount': 5},
-            {'sender': 'C', 'recipient': 'D', 'amount': 3}
-        ]
-        merkle_root = self.blockchain.calculate_merkle_root(transactions)
-        self.assertIsInstance(merkle_root, str)
-        self.assertEqual(len(merkle_root), 64)
-        print("✓ Multiple transactions Merkle root test passed")
-    
-    def test_merkle_root_in_block(self):
-        """Test that Merkle root is included in created blocks"""
-        self.blockchain.transactions = [{'sender': 'test', 'recipient': 'test2', 'amount': 1}]
-        block = self.blockchain.create_block(123, 'prev_hash')
-        
-        self.assertIn('merkle_root', block, "Block should contain merkle_root")
-        self.assertIsInstance(block['merkle_root'], str)
-        print("✓ Merkle root in block test passed")
-# ==================== NEW FEATURE END ====================
+
+    def test_register_node_with_full_url(self):
+        """Should accept http://127.0.0.1:5002"""
+        self.blockchain.register_node("http://127.0.0.1:5002")
+        self.assertIn("127.0.0.1:5002", self.blockchain.nodes)
+
+    def test_register_node_with_host_only(self):
+        """Should accept bare host:port"""
+        self.blockchain.register_node("127.0.0.1:5003")
+        self.assertIn("127.0.0.1:5003", self.blockchain.nodes)
+
+    def test_register_duplicate_nodes(self):
+        """Duplicate nodes should only be added once (set behavior)."""
+        self.blockchain.register_node("http://127.0.0.1:5002")
+        self.blockchain.register_node("http://127.0.0.1:5002")
+        node_count = sum(1 for n in self.blockchain.nodes if "127.0.0.1:5002" in n)
+        self.assertEqual(node_count, 1)
 
 
-# ==================== NEW FEATURE START: Balance System Tests ====================
-class TestBalanceSystem(unittest.TestCase):
-    """Test balance checking and validation"""
-    
+# -----------------------------------------------------------
+# Blockchain Tests
+# -----------------------------------------------------------
+class TestBlockchainCoreEdgeCases(unittest.TestCase):
+
     def setUp(self):
         self.blockchain = Blockchain()
-        self.test_public_key = "test_public_key_123"
-    
-    def test_initial_balance(self):
-        """Test that new wallet has zero balance"""
-        balance = self.blockchain.get_balance(self.test_public_key)
-        self.assertEqual(balance, 0, "New wallet should have zero balance")
-        print("✓ Initial balance test passed")
-    
-    def test_balance_after_receiving(self):
-        """Test balance increases after receiving coins"""
-        # Add transaction where test wallet receives coins
-        transaction = OrderedDict({
-            'sender_public_key': MINING_SENDER,
-            'recipient_public_key': self.test_public_key,
-            'amount': 10
+
+    def test_genesis_block_created(self):
+        """Genesis block should exist on initialization."""
+        self.assertEqual(len(self.blockchain.chain), 1)
+        self.assertEqual(self.blockchain.chain[0]["block_number"], 1)
+        self.assertEqual(self.blockchain.chain[0]["previous_hash"], "00")
+
+    def test_create_block_clears_unconfirmed(self):
+        """Creating a block should clear unconfirmed transactions."""
+        self.blockchain.unconfirmed_transactions.append({
+            "sender_public_key_hash": MINING_SENDER,
+            "recipient_public_key_hash": "recipient",
+            "amount": 1
         })
-        self.blockchain.transactions.append(transaction)
         
+        nonce = self.blockchain.proof_of_work()
+        prev_hash = self.blockchain.hash(self.blockchain.chain[-1])
+        self.blockchain.create_block(nonce, prev_hash)
+        
+        self.assertEqual(len(self.blockchain.unconfirmed_transactions), 0)
+
+    def test_proof_of_work_with_empty_pool(self):
+        """PoW works even with no transactions."""
+        nonce = self.blockchain.proof_of_work()
+        self.assertIsInstance(nonce, int)
+
+    def test_hash_consistency(self):
+        """Same block should produce same hash."""
+        dummy = {
+            "block_number": 10,
+            "timestamp": 12345,
+            "transactions": [],
+            "nonce": 99,
+            "previous_hash": "00"
+        }
+        h1 = self.blockchain.hash(dummy)
+        h2 = self.blockchain.hash(dummy)
+        self.assertEqual(h1, h2)
+        self.assertEqual(len(h1), 64)
+
+    def test_submit_transaction_mining_reward(self):
+        """Mining reward transaction should be added without signature."""
+        result = self.blockchain.submit_transaction(
+            sender_public_key=MINING_SENDER,
+            recipient_public_key="miner123",
+            signature="",
+            amount=1
+        )
+        self.assertIsInstance(result, int)
+        self.assertGreater(len(self.blockchain.unconfirmed_transactions), 0)
+
+
+# -----------------------------------------------------------
+# Pet Registry Tests
+# -----------------------------------------------------------
+class TestPetRegistryEdgeCases(unittest.TestCase):
+
+    def setUp(self):
+        self.blockchain = Blockchain()
+        self.owner_key = "owner_public_key_example"
+
+    def test_register_pet_with_minimal_data(self):
+        """Pet registration should work with minimal data and apply defaults."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "EdgeDog"},
+            owner_public_key=self.owner_key
+        )
+        pet = self.blockchain.pet_registry.get_pet(pet_id)
+
+        self.assertIsNotNone(pet)
+        self.assertEqual(pet["name"], "EdgeDog")
+        self.assertEqual(pet["species"], "dog")  # default applied
+        self.assertEqual(pet["status"], "active")
+
+    def test_register_pet_with_full_data(self):
+        """Pet registration should store all provided data."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={
+                "name": "FullDog",
+                "breed": "Golden Retriever",
+                "species": "dog",
+                "birth_date": "2020-01-01",
+                "color": "Golden",
+                "weight": "65 lbs",
+                "microchip_id": "CHIP123",
+                "photo": "base64photo",
+                "owner_name": "John Doe",
+                "owner_phone": "555-1234",
+                "owner_email": "john@example.com"
+            },
+            owner_public_key=self.owner_key
+        )
+        pet = self.blockchain.pet_registry.get_pet(pet_id)
+
+        self.assertEqual(pet["breed"], "Golden Retriever")
+        self.assertEqual(pet["microchip_id"], "CHIP123")
+        self.assertEqual(pet["owner_name"], "John Doe")
+
+    def test_register_multiple_pets_same_microchip_allowed(self):
+        """Multiple pets can share the same microchip (generates unique pet_id)."""
+        chip = "MICROCHIP_DUPLICATE"
+
+        p1 = self.blockchain.register_pet(
+            pet_data={"name": "Dog1", "microchip_id": chip},
+            owner_public_key=self.owner_key
+        )
+        p2 = self.blockchain.register_pet(
+            pet_data={"name": "Dog2", "microchip_id": chip},
+            owner_public_key=self.owner_key
+        )
+
+        self.assertNotEqual(p1, p2)
+
+    def test_view_pet_profile_invalid_id_returns_false(self):
+        """Viewing non-existent pet should return False."""
+        res = self.blockchain.view_pet_profile("no-such-pet", "viewer123")
+        self.assertFalse(res)
+
+    def test_view_pet_profile_increments_count(self):
+        """Viewing a pet should increment its view count."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "ViewDog"},
+            owner_public_key=self.owner_key
+        )
+        
+        self.blockchain.view_pet_profile(pet_id, "viewer1")
+        self.blockchain.view_pet_profile(pet_id, "viewer2")
+        
+        pet = self.blockchain.pet_registry.get_pet(pet_id)
+        self.assertEqual(pet["view_count"], 2)
+
+    def test_add_vet_record_success(self):
+        """Adding vet record with correct owner should succeed."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "VetDog"},
+            owner_public_key=self.owner_key
+        )
+
+        rec_id = self.blockchain.add_vet_record_to_pet(
+            pet_id,
+            record={
+                "record_type": "vaccination",
+                "vet_name": "Dr. Smith",
+                "vet_clinic": "City Vet",
+                "vet_phone": "555-VET",
+                "procedure": "Rabies Shot",
+                "notes": "Annual vaccination"
+            },
+            owner_public_key=self.owner_key
+        )
+
+        self.assertIsNotNone(rec_id)
+        pet = self.blockchain.pet_registry.get_pet(pet_id)
+        self.assertEqual(len(pet["vet_records"]), 1)
+        self.assertEqual(pet["vet_records"][0]["record_type"], "vaccination")
+
+    def test_add_vet_record_wrong_owner_fails(self):
+        """Adding vet record with wrong owner should fail."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "VetDog"},
+            owner_public_key="correct_owner"
+        )
+
+        rec = self.blockchain.add_vet_record_to_pet(
+            pet_id,
+            record={
+                "record_type": "vaccination",
+                "vet_name": "Dr. Wrong",
+                "procedure": "Rabies Shot"
+            },
+            owner_public_key="WRONG_OWNER"
+        )
+
+        self.assertFalse(rec)
+
+    def test_report_pet_lost_success(self):
+        """Reporting pet lost with correct owner should succeed."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "LostDog"},
+            owner_public_key=self.owner_key
+        )
+
+        ok = self.blockchain.report_pet_lost(
+            pet_id,
+            owner_public_key=self.owner_key,
+            location="Central Park",
+            description="Ran away during walk"
+        )
+
+        self.assertTrue(ok)
+        pet = self.blockchain.pet_registry.get_pet(pet_id)
+        self.assertEqual(pet["status"], "lost")
+        self.assertEqual(pet["lost_location"], "Central Park")
+
+    def test_report_pet_lost_with_wrong_owner(self):
+        """Reporting pet lost with wrong owner should fail."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "LostDog"},
+            owner_public_key="yes_owner"
+        )
+
+        ok = self.blockchain.report_pet_lost(
+            pet_id,
+            owner_public_key="bad_owner",
+            location="City",
+            description="Gone"
+        )
+
+        self.assertFalse(ok)
+        self.assertEqual(
+            self.blockchain.pet_registry.get_pet(pet_id)["status"],
+            "active"
+        )
+
+    def test_report_pet_found_success(self):
+        """Reporting found pet when pet is lost should succeed."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "FoundDog"},
+            owner_public_key=self.owner_key
+        )
+
+        # First mark as lost
+        self.blockchain.report_pet_lost(
+            pet_id,
+            owner_public_key=self.owner_key,
+            location="Park",
+            description="Lost"
+        )
+
+        # Then report found
+        ok = self.blockchain.report_pet_found(
+            pet_id,
+            finder_public_key="finder123",
+            finder_contact="555-FIND"
+        )
+
+        self.assertTrue(ok)
+        pet = self.blockchain.pet_registry.get_pet(pet_id)
+        self.assertEqual(pet["status"], "active")
+        self.assertEqual(pet["found_by"], "555-FIND")
+
+    def test_report_pet_found_when_not_lost(self):
+        """Reporting found pet when not lost should fail."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "ChillDog"},
+            owner_public_key=self.owner_key
+        )
+
+        ok = self.blockchain.report_pet_found(
+            pet_id,
+            finder_public_key="finder123",
+            finder_contact="555"
+        )
+        self.assertFalse(ok)
+
+    def test_mark_pet_lost_twice_ok(self):
+        """Marking pet lost multiple times should update location."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "TwiceLost"},
+            owner_public_key=self.owner_key
+        )
+
+        self.blockchain.report_pet_lost(pet_id, self.owner_key, "City", "first")
+        self.blockchain.report_pet_lost(pet_id, self.owner_key, "City2", "second")
+
+        pet = self.blockchain.pet_registry.get_pet(pet_id)
+        self.assertEqual(pet["status"], "lost")
+        self.assertEqual(pet["lost_location"], "City2")
+
+
+# -----------------------------------------------------------
+# Search Tests
+# -----------------------------------------------------------
+class TestPetSearch(unittest.TestCase):
+
+    def setUp(self):
+        self.blockchain = Blockchain()
+        self.owner_key = "search_owner"
+
+    def test_search_pets_empty_registry(self):
+        """Searching empty registry should return empty list."""
+        results = self.blockchain.pet_registry.search_pets()
+        self.assertEqual(len(results), 0)
+
+    def test_search_pets_all(self):
+        """Searching without query should return all pets."""
+        self.blockchain.register_pet(
+            pet_data={"name": "Dog1"},
+            owner_public_key=self.owner_key
+        )
+        self.blockchain.register_pet(
+            pet_data={"name": "Dog2"},
+            owner_public_key=self.owner_key
+        )
+
+        results = self.blockchain.pet_registry.search_pets()
+        self.assertEqual(len(results), 2)
+
+    def test_search_pets_by_name(self):
+        """Searching by name should return matching pets."""
+        self.blockchain.register_pet(
+            pet_data={"name": "Buddy"},
+            owner_public_key=self.owner_key
+        )
+        self.blockchain.register_pet(
+            pet_data={"name": "Max"},
+            owner_public_key=self.owner_key
+        )
+
+        results = self.blockchain.pet_registry.search_pets(query="Buddy")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["name"], "Buddy")
+
+    def test_search_pets_by_microchip(self):
+        """Searching by microchip should return matching pets."""
+        self.blockchain.register_pet(
+            pet_data={"name": "ChipDog", "microchip_id": "CHIP999"},
+            owner_public_key=self.owner_key
+        )
+
+        results = self.blockchain.pet_registry.search_pets(query="CHIP999")
+        self.assertEqual(len(results), 1)
+
+    def test_search_pets_lost_only(self):
+        """Searching with lost_only flag should return only lost pets."""
+        p1 = self.blockchain.register_pet(
+            pet_data={"name": "Active"},
+            owner_public_key=self.owner_key
+        )
+        p2 = self.blockchain.register_pet(
+            pet_data={"name": "Lost"},
+            owner_public_key=self.owner_key
+        )
+
+        self.blockchain.report_pet_lost(p2, self.owner_key, "Park", "Lost")
+
+        results = self.blockchain.pet_registry.search_pets(lost_only=True)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["name"], "Lost")
+
+
+# -----------------------------------------------------------
+# History Tests
+# -----------------------------------------------------------
+class TestHistoryAndStatsEdgeCases(unittest.TestCase):
+
+    def setUp(self):
+        self.blockchain = Blockchain()
+        self.owner = "stats_owner"
+
+    def test_history_for_unknown_pet(self):
+        """History for non-existent pet should return empty list."""
+        history = self.blockchain.get_pet_blockchain_history("nope")
+        self.assertEqual(history, [])
+
+    def test_history_includes_pending(self):
+        """History should include pending transactions."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "HistoryDog"},
+            owner_public_key=self.owner
+        )
+
+        self.blockchain.report_pet_lost(
+            pet_id,
+            owner_public_key=self.owner,
+            location="Nowhere",
+            description="Pending"
+        )
+
+        history = self.blockchain.get_pet_blockchain_history(pet_id)
+        pending = [h for h in history if h.get("status") == "pending"]
+
+        self.assertGreaterEqual(len(pending), 1)
+
+    def test_history_after_mining(self):
+        """History should show transactions in mined blocks."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "MinedDog"},
+            owner_public_key=self.owner
+        )
+
         # Mine block
         nonce = self.blockchain.proof_of_work()
-        last_block = self.blockchain.chain[-1]
-        previous_hash = self.blockchain.hash(last_block)
-        self.blockchain.create_block(nonce, previous_hash)
-        
-        balance = self.blockchain.get_balance(self.test_public_key)
-        self.assertEqual(balance, 10, "Balance should be 10 after receiving")
-        print("✓ Balance after receiving test passed")
-    
-    def test_validate_insufficient_balance(self):
-        """Test validation rejects transaction with insufficient balance"""
-        is_valid = self.blockchain.validate_transaction_amount(self.test_public_key, 100)
-        self.assertFalse(is_valid, "Should reject transaction exceeding balance")
-        print("✓ Insufficient balance validation test passed")
-    
-    def test_validate_sufficient_balance(self):
-        """Test validation accepts transaction with sufficient balance"""
-        # First give the wallet some balance
-        transaction = OrderedDict({
-            'sender_public_key': MINING_SENDER,
-            'recipient_public_key': self.test_public_key,
-            'amount': 50
-        })
-        self.blockchain.transactions.append(transaction)
-        
-        nonce = self.blockchain.proof_of_work()
-        last_block = self.blockchain.chain[-1]
-        previous_hash = self.blockchain.hash(last_block)
-        self.blockchain.create_block(nonce, previous_hash)
-        
-        # Now validate a transaction
-        is_valid = self.blockchain.validate_transaction_amount(self.test_public_key, 30)
-        self.assertTrue(is_valid, "Should accept transaction within balance")
-        print("✓ Sufficient balance validation test passed")
-# ==================== NEW FEATURE END ====================
+        prev_hash = self.blockchain.hash(self.blockchain.chain[-1])
+        self.blockchain.create_block(nonce, prev_hash)
 
+        history = self.blockchain.get_pet_blockchain_history(pet_id)
+        mined = [h for h in history if "block_number" in h]
 
-class TestProofOfWork(unittest.TestCase):
-    """Test proof of work algorithm"""
-    
-    def setUp(self):
-        self.blockchain = Blockchain()
-    
-    def test_proof_of_work_returns_integer(self):
-        """Test proof of work returns a valid nonce"""
-        self.blockchain.transactions.append({
-            'sender': 'test_sender',
-            'recipient': 'test_recipient',
-            'amount': 10
-        })
-        nonce = self.blockchain.proof_of_work()
-        
-        self.assertIsInstance(nonce, int, "Nonce should be an integer")
-        self.assertGreaterEqual(nonce, 0, "Nonce should be non-negative")
-        print("✓ Proof of work returns integer test passed")
-    
-    def test_valid_proof(self):
-        """Test that valid proof is accepted"""
-        transactions = [{'sender': 'A', 'recipient': 'B', 'amount': 5}]
-        last_hash = 'test_hash'
-        nonce = 0
-        
-        # Find a valid nonce
-        while not self.blockchain.valid_proof(transactions, last_hash, nonce):
-            nonce += 1
-            if nonce > 10000:  # Safety limit for test
-                break
-        
-        is_valid = self.blockchain.valid_proof(transactions, last_hash, nonce)
-        self.assertTrue(is_valid, "Found nonce should create valid proof")
-        print("✓ Valid proof test passed")
+        self.assertGreaterEqual(len(mined), 1)
 
+    def test_stats_on_empty_registry(self):
+        """Stats on empty registry should return zeros."""
+        stats = self.blockchain.get_registry_stats()
 
-class TestChainValidation(unittest.TestCase):
-    """Test blockchain validation"""
-    
-    def setUp(self):
-        self.blockchain = Blockchain()
-    
-    def test_valid_chain_single_block(self):
-        """Test validation of chain with only genesis block"""
-        is_valid = self.blockchain.valid_chain(self.blockchain.chain)
-        self.assertTrue(is_valid, "Chain with only genesis block should be valid")
-        print("✓ Single block chain validation test passed")
-    
-    def test_valid_chain_multiple_blocks(self):
-        """Test validation of chain with multiple blocks"""
-        # Add several blocks
-        for i in range(3):
-            self.blockchain.transactions.append({
-                'sender_public_key': MINING_SENDER,
-                'recipient_public_key': f'recipient_{i}',
-                'amount': i + 1
-            })
-            nonce = self.blockchain.proof_of_work()
-            last_block = self.blockchain.chain[-1]
-            previous_hash = self.blockchain.hash(last_block)
-            self.blockchain.create_block(nonce, previous_hash)
-        
-        is_valid = self.blockchain.valid_chain(self.blockchain.chain)
-        self.assertTrue(is_valid, "Valid chain should pass validation")
-        print("✓ Multiple blocks chain validation test passed")
-    
-    def test_invalid_chain_tampered_data(self):
-        """Test detection of tampered blockchain"""
-        # Create valid chain
-        self.blockchain.transactions.append({
-            'sender_public_key': MINING_SENDER,
-            'recipient_public_key': 'recipient',
-            'amount': 10
-        })
-        nonce = self.blockchain.proof_of_work()
-        last_block = self.blockchain.chain[-1]
-        previous_hash = self.blockchain.hash(last_block)
-        self.blockchain.create_block(nonce, previous_hash)
-        
-        # Tamper with the chain
-        if len(self.blockchain.chain) > 1:
-            self.blockchain.chain[1]['transactions'] = []
-            
-            is_valid = self.blockchain.valid_chain(self.blockchain.chain)
-            self.assertFalse(is_valid, "Tampered chain should be invalid")
-            print("✓ Invalid chain detection test passed")
+        self.assertEqual(stats["total_pets"], 0)
+        self.assertEqual(stats["active_pets"], 0)
+        self.assertEqual(stats["lost_pets"], 0)
+        self.assertEqual(stats["total_vet_records"], 0)
+        self.assertEqual(stats["total_views"], 0)
 
-
-# ==================== NEW FEATURE START: Smart Contract Tests ====================
-class TestSmartContracts(unittest.TestCase):
-    """Test smart contract functionality"""
-    
-    def setUp(self):
-        self.blockchain = Blockchain()
-    
-    def test_deploy_contract(self):
-        """Test smart contract deployment"""
-        contract_id = self.blockchain.deploy_smart_contract(
-            'contract_001',
-            'simple_contract_code',
-            'creator_public_key'
+    def test_stats_update_correctly(self):
+        """Stats should accurately reflect registry state."""
+        # Register pets
+        p1 = self.blockchain.register_pet(
+            pet_data={"name": "Stat1"},
+            owner_public_key=self.owner
         )
-        
-        self.assertEqual(contract_id, 'contract_001', "Should return correct contract ID")
-        self.assertIn('contract_001', self.blockchain.smart_contracts, "Contract should be stored")
-        print("✓ Smart contract deployment test passed")
-    
-    def test_execute_contract_get_state(self):
-        """Test smart contract state retrieval"""
-        self.blockchain.deploy_smart_contract(
-            'contract_002',
-            'code',
-            'creator'
+        p2 = self.blockchain.register_pet(
+            pet_data={"name": "Stat2"},
+            owner_public_key=self.owner
         )
-        
-        result = self.blockchain.execute_smart_contract('contract_002', 'get_state', {})
-        self.assertIsInstance(result, dict, "Should return state dictionary")
-        print("✓ Smart contract get state test passed")
-    
-    def test_execute_contract_set_state(self):
-        """Test smart contract state modification"""
-        self.blockchain.deploy_smart_contract(
-            'contract_003',
-            'code',
-            'creator'
+
+        # Mark p2 as lost
+        self.blockchain.report_pet_lost(
+            p2, self.owner, "Park", "Lost"
         )
-        
-        result = self.blockchain.execute_smart_contract(
-            'contract_003',
-            'set_state',
-            {'key': 'value'}
+
+        # Add vet record to p1
+        self.blockchain.add_vet_record_to_pet(
+            p1,
+            record={
+                "record_type": "checkup",
+                "vet_name": "Dr. Edge",
+                "procedure": "Exam"
+            },
+            owner_public_key=self.owner
         )
-        
-        self.assertTrue(result.get('success'), "State update should succeed")
-        self.assertEqual(result['state']['key'], 'value', "State should be updated")
-        print("✓ Smart contract set state test passed")
-    
-    def test_execute_nonexistent_contract(self):
-        """Test executing non-existent contract"""
-        result = self.blockchain.execute_smart_contract('nonexistent', 'get_state', {})
-        self.assertIn('error', result, "Should return error for non-existent contract")
-        print("✓ Non-existent contract test passed")
-# ==================== NEW FEATURE END ====================
+
+        # View p1
+        self.blockchain.view_pet_profile(p1, "viewer1")
+        self.blockchain.view_pet_profile(p1, "viewer2")
+
+        stats = self.blockchain.get_registry_stats()
+
+        self.assertEqual(stats["total_pets"], 2)
+        self.assertEqual(stats["active_pets"], 1)
+        self.assertEqual(stats["lost_pets"], 1)
+        self.assertGreaterEqual(stats["total_vet_records"], 1)
+        self.assertGreaterEqual(stats["total_views"], 2)
 
 
-# ==================== NEW FEATURE START: Statistics Tests ====================
-class TestBlockchainStatistics(unittest.TestCase):
-    """Test blockchain statistics functionality"""
-    
+# -----------------------------------------------------------
+# QR Code Tests
+# -----------------------------------------------------------
+class TestQRCodeGeneration(unittest.TestCase):
+
     def setUp(self):
         self.blockchain = Blockchain()
-    
-    def test_get_stats_genesis_only(self):
-        """Test statistics with only genesis block"""
-        stats = self.blockchain.get_blockchain_stats()
-        
-        self.assertEqual(stats['total_blocks'], 1, "Should have 1 block")
-        self.assertEqual(stats['total_transactions'], 0, "Should have 0 transactions")
-        self.assertEqual(stats['pending_transactions'], 0, "Should have 0 pending")
-        print("✓ Genesis block statistics test passed")
-    
-    def test_get_stats_with_blocks(self):
-        """Test statistics with multiple blocks"""
-        # Add some transactions and mine blocks
-        for i in range(3):
-            self.blockchain.transactions.append({
-                'sender_public_key': MINING_SENDER,
-                'recipient_public_key': f'recipient_{i}',
-                'amount': i + 1
-            })
-            nonce = self.blockchain.proof_of_work()
-            last_block = self.blockchain.chain[-1]
-            previous_hash = self.blockchain.hash(last_block)
-            self.blockchain.create_block(nonce, previous_hash)
-        
-        stats = self.blockchain.get_blockchain_stats()
-        
-        self.assertEqual(stats['total_blocks'], 4, "Should have 4 blocks")
-        self.assertGreater(stats['total_transactions'], 0, "Should have transactions")
-        print("✓ Multiple blocks statistics test passed")
-# ==================== NEW FEATURE END ====================
+        self.owner_key = "qr_owner"
+
+    def test_generate_qr_code(self):
+        """QR code should be generated for valid pet_id."""
+        pet_id = self.blockchain.register_pet(
+            pet_data={"name": "QRDog"},
+            owner_public_key=self.owner_key
+        )
+
+        qr = self.blockchain.pet_registry.generate_qr(pet_id)
+        self.assertIsNotNone(qr)
+        self.assertTrue(qr.startswith("data:image/png;base64,"))
 
 
-# ==================== NEW FEATURE START: Hashing Algorithm Tests ====================
-class TestHashingAlgorithms(unittest.TestCase):
-    """Test multiple hashing algorithm support"""
-    
-    def setUp(self):
-        self.blockchain = Blockchain()
-        self.test_data = "test_data_for_hashing"
-    
-    def test_sha256_hashing(self):
-        """Test SHA-256 hashing"""
-        hash_result = self.blockchain.hash_with_algorithm(self.test_data, 'sha256')
-        self.assertEqual(len(hash_result), 64, "SHA-256 should produce 64-char hash")
-        print("✓ SHA-256 hashing test passed")
-    
-    def test_sha3_256_hashing(self):
-        """Test SHA3-256 hashing"""
-        hash_result = self.blockchain.hash_with_algorithm(self.test_data, 'sha3_256')
-        self.assertEqual(len(hash_result), 64, "SHA3-256 should produce 64-char hash")
-        print("✓ SHA3-256 hashing test passed")
-    
-    def test_blake2b_hashing(self):
-        """Test BLAKE2b hashing"""
-        hash_result = self.blockchain.hash_with_algorithm(self.test_data, 'blake2b')
-        self.assertEqual(len(hash_result), 128, "BLAKE2b should produce 128-char hash")
-        print("✓ BLAKE2b hashing test passed")
-    
-    def test_different_algorithms_produce_different_hashes(self):
-        """Test that different algorithms produce different hashes"""
-        sha256 = self.blockchain.hash_with_algorithm(self.test_data, 'sha256')
-        sha3 = self.blockchain.hash_with_algorithm(self.test_data, 'sha3_256')
-        blake2b = self.blockchain.hash_with_algorithm(self.test_data, 'blake2b')
-        
-        self.assertNotEqual(sha256, sha3, "SHA-256 and SHA3-256 should differ")
-        self.assertNotEqual(sha256, blake2b, "SHA-256 and BLAKE2b should differ")
-        print("✓ Different algorithms produce different hashes test passed")
-    
-    def test_invalid_algorithm(self):
-        """Test invalid algorithm raises error"""
-        with self.assertRaises(ValueError):
-            self.blockchain.hash_with_algorithm(self.test_data, 'invalid_algo')
-        print("✓ Invalid algorithm test passed")
-# ==================== NEW FEATURE END ====================
-
-
-# ==================== NEW FEATURE START: Transaction History Tests ====================
-class TestTransactionHistory(unittest.TestCase):
-    """Test transaction history functionality"""
-    
-    def setUp(self):
-        self.blockchain = Blockchain()
-        self.test_public_key = "test_wallet_key"
-    
-    def test_empty_history(self):
-        """Test transaction history for new wallet"""
-        history = self.blockchain.get_transaction_history(self.test_public_key)
-        self.assertEqual(len(history), 0, "New wallet should have no history")
-        print("✓ Empty transaction history test passed")
-    
-    def test_history_with_transactions(self):
-        """Test transaction history retrieval"""
-        # Add transactions involving test wallet
-        for i in range(3):
-            self.blockchain.transactions.append({
-                'sender_public_key': MINING_SENDER,
-                'recipient_public_key': self.test_public_key,
-                'amount': i + 1
-            })
-            nonce = self.blockchain.proof_of_work()
-            last_block = self.blockchain.chain[-1]
-            previous_hash = self.blockchain.hash(last_block)
-            self.blockchain.create_block(nonce, previous_hash)
-        
-        history = self.blockchain.get_transaction_history(self.test_public_key)
-        self.assertGreater(len(history), 0, "Should have transaction history")
-        
-        # Check that history contains required fields
-        if len(history) > 0:
-            self.assertIn('block_number', history[0], "Should include block number")
-            self.assertIn('timestamp', history[0], "Should include timestamp")
-        print("✓ Transaction history retrieval test passed")
-    
-    def test_history_limit(self):
-        """Test transaction history limit parameter"""
-        # Add many transactions
-        for i in range(15):
-            self.blockchain.transactions.append({
-                'sender_public_key': self.test_public_key,
-                'recipient_public_key': f'recipient_{i}',
-                'amount': 1
-            })
-            nonce = self.blockchain.proof_of_work()
-            last_block = self.blockchain.chain[-1]
-            previous_hash = self.blockchain.hash(last_block)
-            self.blockchain.create_block(nonce, previous_hash)
-        
-        history = self.blockchain.get_transaction_history(self.test_public_key, limit=5)
-        self.assertLessEqual(len(history), 5, "Should respect limit parameter")
-        print("✓ Transaction history limit test passed")
-# ==================== NEW FEATURE END ====================
-
-
-def run_all_tests():
-    """Run all test suites"""
-    # Create test suite
-    loader = unittest.TestLoader()
-    suite = unittest.TestSuite()
-    
-    # Add all test classes
-    suite.addTests(loader.loadTestsFromTestCase(TestBlockchainBasics))
-    suite.addTests(loader.loadTestsFromTestCase(TestMerkleTree))
-    suite.addTests(loader.loadTestsFromTestCase(TestBalanceSystem))
-    suite.addTests(loader.loadTestsFromTestCase(TestProofOfWork))
-    suite.addTests(loader.loadTestsFromTestCase(TestChainValidation))
-    suite.addTests(loader.loadTestsFromTestCase(TestSmartContracts))
-    suite.addTests(loader.loadTestsFromTestCase(TestBlockchainStatistics))
-    suite.addTests(loader.loadTestsFromTestCase(TestHashingAlgorithms))
-    suite.addTests(loader.loadTestsFromTestCase(TestTransactionHistory))
-    
-    # Run tests
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
-    
-    # Print summary
-    print("\n" + "="*70)
-    print("TEST SUMMARY")
-    print("="*70)
-    print(f"Tests run: {result.testsRun}")
-    print(f"Successes: {result.testsRun - len(result.failures) - len(result.errors)}")
-    print(f"Failures: {len(result.failures)}")
-    print(f"Errors: {len(result.errors)}")
-    print("="*70)
-    
-    return result.wasSuccessful()
-
-
-if __name__ == '__main__':
-    success = run_all_tests()
-    sys.exit(0 if success else 1)
+# -----------------------------------------------------------
+# MAIN
+# -----------------------------------------------------------
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

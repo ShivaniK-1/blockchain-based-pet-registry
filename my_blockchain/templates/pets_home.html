@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<!-- ====================== NEW FILE: PET REGISTRY HOME PAGE - START ====================== -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Pet Registry - Home</title>
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/vendor/font-awesome/font-awesome.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .hero {
+            padding: 100px 0 50px 0;
+            color: white;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+        }
+        .feature-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 20px 0;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        .feature-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        .stats-card {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            color: white;
+            text-align: center;
+            margin: 10px 0;
+            backdrop-filter: blur(10px);
+        }
+        .stats-number {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        .action-button {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            margin: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .navbar {
+            background: rgba(0,0,0,0.3) !important;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a href="/pets" class="navbar-brand">🐾 Pet Blockchain Registry</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item active">
+                        <a href="/pets" class="nav-link">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/pet/register" class="nav-link">Register Pet</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/pet/search" class="nav-link">Search Pets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/" class="nav-link">Blockchain Explorer</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <div class="container">
+            <h1>🐾 Blockchain Pet Registry</h1>
+            <p>Permanent, Tamper-Proof Identity for Your Beloved Pets</p>
+            
+            <div>
+                <a href="/pet/register" class="btn btn-light btn-lg action-button">
+                    <i class="fa fa-plus-circle"></i> Register Your Pet
+                </a>
+                <a href="/pet/search" class="btn btn-warning btn-lg action-button">
+                    <i class="fa fa-search"></i> Search Lost Pets
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Stats Section -->
+        <div class="row mb-5">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalPets">0</div>
+                    <div>Total Pets Registered</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="activePets">0</div>
+                    <div>Active Pets</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number text-warning" id="lostPets">0</div>
+                    <div>Lost Pets</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="vetRecords">0</div>
+                    <div>Vet Records Stored</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="row">
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon">📝</div>
+                    <h3>Register Your Pet</h3>
+                    <p>Create a permanent, tamper-proof identity for your pet on the blockchain with photos, medical history, and owner information.</p>
+                    <a href="/pet/register" class="btn btn-primary">Get Started</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Search & Find</h3>
+                    <p>Search for lost pets instantly. Every profile view is recorded on the blockchain, creating a transparent recovery trail.</p>
+                    <a href="/pet/search" class="btn btn-primary">Search Now</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon">🏥</div>
+                    <h3>Medical Records</h3>
+                    <p>Store veterinary records permanently. Vaccination history, treatments, and vet contacts - all verifiable and immutable.</p>
+                    <a href="/pet/register" class="btn btn-primary">Learn More</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4 mb-5">
+            <div class="col-md-12">
+                <div class="feature-card">
+                    <h3 class="text-center mb-4">Why Blockchain for Pet Registry?</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>✅ Permanent & Immutable</h5>
+                            <p>Records cannot be altered or deleted. Your pet's identity is secure forever.</p>
+                            
+                            <h5>✅ Transparent & Verifiable</h5>
+                            <p>Anyone can verify pet ownership and medical history. No fake registrations.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>✅ Lost Pet Recovery</h5>
+                            <p>Global search capability. Anyone who finds your pet can instantly contact you.</p>
+                            
+                            <h5>✅ Profile View Tracking</h5>
+                            <p>Every profile view creates a blockchain transaction, helping track lost pet searches.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center" style="padding: 50px 0;">
+        <a href="/pet/register" class="btn btn-light btn-lg action-button">
+            🚀 Get Started - Register Your Pet Now
+        </a>
+    </div>
+
+    <script src="/static/vendor/jquery/jquery.min.js"></script>
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Load stats on page load
+        window.onload = function() {
+            fetch('/api/stats/pets')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalPets').textContent = data.total_pets;
+                    document.getElementById('activePets').textContent = data.active_pets;
+                    document.getElementById('lostPets').textContent = data.lost_pets;
+                    document.getElementById('vetRecords').textContent = data.total_vet_records;
+                })
+                .catch(error => {
+                    console.error('Error loading stats:', error);
+                });
+        };
+    </script>
+
+</body>
+</html>
+<!-- ====================== NEW FILE: PET REGISTRY HOME PAGE - END ====================== -->
